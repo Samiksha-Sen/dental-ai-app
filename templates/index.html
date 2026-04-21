@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dental Analyzer</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+
+<div class="container">
+    <h1>🦷 Dental X-ray AI Analyzer</h1>
+    <p class="subtitle">Upload an X-ray to predict extraction type</p>
+
+    <!-- Upload Form -->
+    <form action="/predict" method="post" enctype="multipart/form-data" onsubmit="showLoading()">
+        <input type="file" name="file" required>
+        <br><br>
+        <button type="submit">Analyze</button>
+    </form>
+
+    <!-- Loading -->
+    <p id="loading">Analyzing X-ray... ⏳</p>
+
+    <!-- Result Section -->
+    {% if difficulty %}
+    <div class="result">
+        <h2>Result</h2>
+
+        <p><b>Condition:</b> {{ difficulty }}</p>
+        <p><b>Procedure:</b> {{ extraction }}</p>
+
+        {% if confidence %}
+        <p><b>Confidence:</b> {{ confidence }}%</p>
+        {% endif %}
+
+        {% if image_path %}
+        <img src="{{ image_path }}" alt="Uploaded X-ray">
+        {% endif %}
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+function showLoading() {
+    document.getElementById("loading").style.display = "block";
+}
+</script>
+
+</body>
+</html>
