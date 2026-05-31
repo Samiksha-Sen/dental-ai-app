@@ -1,108 +1,109 @@
-from flask import Flask, render_template, request
+from flask import Flask, request, jsonify, render_template
 import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.utils import load_img, img_to_array
-from werkzeug.utils import secure_filename
-import uuid
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app)
 
-# ==========================
-# CONFIG
-# ==========================
-UPLOAD_FOLDER = 'static/uploads'
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
-
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 5 * 1024 * 1024  # 5MB
+UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# ==========================
-# LOAD MODEL
-# ==========================
+# Load trained model
 model = tf.keras.models.load_model("caries_model1.h5")
 
-# ==========================
-# FILE CHECK
-# ==========================
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-# ==========================
-# PREDICTION
-# ==========================
 def predict_caries(filepath):
-    try:
-        _, h, w, c = model.input_shape
+    # Get expected input size from model
+    _, h, w, c = model.input_shape
 
-        if c == 1:
-            img = load_img(filepath, target_size=(h, w), color_mode='grayscale')
-        else:
-            img = load_img(filepath, target_size=(h, w))
+    # Load image correctly
+    if c == 1:
+        img = load_img(
+            filepath,
+            target_size=(h, w),
+            color_mode="grayscale"
+        )
+    else:
+        img = load_img(
+            filepath,
+            target_size=(h, w)
+        )
 
-        img_array = img_to_array(img) / 255.0
-        img_array = np.expand_dims(img_array, axis=0)
+    # Convert image to array
+    img = img_to_array(img)
 
-        prediction = model.predict(img_array, verbose=0)
+    # Normalize
+    img = img / 255.0
 
-        if prediction.shape[-1] == 1:
-            confidence = float(prediction[0][0])
-        else:
-            confidence = float(np.max(prediction[0]))
+    # Add batch dimension
+    img = np.expand_dims(img, axis=0)
 
-        # Risk level logic
-        if confidence > 0.8:
-            risk = "High Risk"
-        elif confidence > 0.6:
-            risk = "Moderate Risk"
-        else:
-            risk = "Low Risk"
+    # Predict
+    prediction = model.predict(img, verbose=0)
 
-        if confidence > 0.5:
-            return "Caries Detected", "Surgical Extraction Recommended", round(confidence * 100, 2), risk
-        else:
-            return "No Caries", "Manual Extraction Possible", round((1 - confidence) * 100, 2), risk
+    print("Raw Prediction:", prediction)
 
-    except Exception as e:
-        return "Error", str(e), 0, "Unknown"
+    confidence = float(prediction[0][0])
 
-# ==========================
-# ROUTES
-# ==========================
-@app.route('/')
+    # Binary classification
+    if confidence >= 0.5:
+        condition = "Caries Found"
+        extraction = "Go for surgical extraction"
+        confidence_percent = confidence * 100
+    else:
+        condition = "No Caries Detected"
+        extraction = "Go for manual extraction"
+        confidence_percent = (1 - confidence) * 100
+
+    return (
+        condition,
+        extraction,
+        round(confidence_percent, 2)
+    )
+
+
+@app.route("/")
 def home():
-    return render_template('index.html')
+    return render_template("index.html")
 
-@app.route('/predict', methods=['POST'])
+
+@app.route("/predict", methods=["POST"])
 def predict():
 
-    if 'file' not in request.files:
-        return render_template('index.html', error="No file uploaded")
+    if "file" not in request.files:
+        return jsonify({
+            "error": "No file uploaded"
+        })
 
-    file = request.files['file']
+    file = request.files["file"]
 
-    if file.filename == '':
-        return render_template('index.html', error="No file selected")
+    if file.filename == "":
+        return jsonify({
+            "error": "No file selected"
+        })
 
-    if not allowed_file(file.filename):
-        return render_template('index.html', error="Invalid file type")
+    filepath = os.path.join(
+        UPLOAD_FOLDER,
+        file.filename
+    )
 
-    filename = str(uuid.uuid4()) + "_" + secure_filename(file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
 
-    condition, extraction, confidence, risk = predict_caries(filepath)
+    condition, extraction, confidence = predict_caries(filepath)
 
-    return render_template('index.html',
-                           difficulty=condition,
-                           extraction=extraction,
-                           confidence=confidence,
-                           risk=risk,
-                           image_path=filepath)
+    return jsonify({
+        "condition": condition,
+        "extraction": extraction,
+        "confidence": confidence
+    })
 
-# ==========================
-# RUN
-# ==========================
-if __name__ == '__main__':
-    app.run(debug=True)
+
+if __name__ == "__main__":
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )

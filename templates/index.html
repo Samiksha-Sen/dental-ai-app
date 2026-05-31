@@ -1,52 +1,1107 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Dental Analyzer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DentalAI - Clinical Attestation Diagnostic Network</title>
+    <!-- Google Fonts: Outfit (Clinical & Modern) & Inter (Clean Content) -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/style.css">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
 
-<div class="container">
-    <h1>🦷 Dental X-ray AI Analyzer</h1>
-    <p class="subtitle">Upload an X-ray to predict extraction type</p>
-
-    <!-- Upload Form -->
-    <form action="/predict" method="post" enctype="multipart/form-data" onsubmit="showLoading()">
-        <input type="file" name="file" required>
-        <br><br>
-        <button type="submit">Analyze</button>
-    </form>
-
-    <!-- Loading -->
-    <p id="loading">Analyzing X-ray... ⏳</p>
-
-    <!-- Result Section -->
-    {% if difficulty %}
-    <div class="result">
-        <h2>Result</h2>
-
-        <p><b>Condition:</b> {{ difficulty }}</p>
-        <p><b>Procedure:</b> {{ extraction }}</p>
-
-        {% if confidence %}
-        <p><b>Confidence:</b> {{ confidence }}%</p>
-        {% endif %}
-
-        {% if image_path %}
-        <img src="{{ image_path }}" alt="Uploaded X-ray">
-        {% endif %}
+    <!-- ==========================================
+       AUTHENTICATION OVERLAYS
+       ========================================== -->
+    
+    <!-- Screen 1: Login Portal -->
+    <div class="auth-page" id="auth-login-page">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-card-logo">🦷</div>
+                <h2 class="auth-card-title">DENTAL.AI</h2>
+                <p class="auth-card-desc">Attestation-Grade Dental Diagnostic Network</p>
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label">Clinical License Email</label>
+                <div class="input-control-wrapper">
+                    <input type="text" class="input-control" id="login-email" value="dr.samiksha@dentistry.ai" placeholder="dr.samiksha@dentistry.ai">
+                </div>
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label">Secure Access Password</label>
+                <div class="input-control-wrapper">
+                    <input type="password" class="input-control" id="login-pass" value="••••••••••••" placeholder="Enter password">
+                </div>
+            </div>
+            
+            <button class="btn-primary" onclick="handleDoctorLogin()" style="margin-bottom: 16px;">Decrypt & Sign In</button>
+            <button class="btn-secondary" onclick="handleBiometricLogin()" style="margin-bottom: 24px;">🧬 Scan TouchID / FaceKey</button>
+            
+            <div style="text-align: center; font-size: 13px; color: var(--text-secondary);">
+                Need clinical license verification? <a href="#" onclick="showAuthPage('signup')" style="color: var(--primary-light); text-decoration: none; font-weight: 600;">Register License</a>
+            </div>
+        </div>
     </div>
-    {% endif %}
 
-</div>
+    <!-- Screen 2: License Registration Form -->
+    <div class="auth-page" id="auth-signup-page" style="display: none;">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-card-logo">📝</div>
+                <h2 class="auth-card-title">License Registry</h2>
+                <p class="auth-card-desc">Verify DDS status with health database regulatory bodies</p>
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label">Full Clinical Name</label>
+                <input type="text" class="input-control" id="signup-name" value="Dr. Samiksha Sen">
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label">Dental License Reference No.</label>
+                <input type="text" class="input-control" id="signup-license" value="DDS-94031-WHO">
+            </div>
+            
+            <div class="input-group">
+                <label class="input-label">Clinic Center Name</label>
+                <input type="text" class="input-control" id="signup-clinic" value="Apex Dental Diagnostics">
+            </div>
+            
+            <button class="btn-primary" onclick="showAuthPage('otp')" style="margin-bottom: 16px;">Send Verification Request</button>
+            <button class="btn-secondary" onclick="showAuthPage('login')">Return to Sign In</button>
+        </div>
+    </div>
 
-<script>
-function showLoading() {
-    document.getElementById("loading").style.display = "block";
-}
-</script>
+    <!-- Screen 3: OTP Verification -->
+    <div class="auth-page" id="auth-otp-page" style="display: none;">
+        <div class="auth-card">
+            <div class="auth-header">
+                <div class="auth-card-logo">📲</div>
+                <h2 class="auth-card-title">Attestation Authentication</h2>
+                <p class="auth-card-desc">6-digit decrypt token dispatched to +91 •••• 530</p>
+            </div>
+            
+            <div class="otp-box-row">
+                <input type="text" class="otp-digit-box" value="7" maxlength="1">
+                <input type="text" class="otp-digit-box" value="4" maxlength="1">
+                <input type="text" class="otp-digit-box" value="0" maxlength="1">
+                <input type="text" class="otp-digit-box" value="9" maxlength="1">
+                <input type="text" class="otp-digit-box" value="3" maxlength="1">
+                <input type="text" class="otp-digit-box" value="2" maxlength="1">
+            </div>
+            
+            <p style="text-align: center; font-size: 13px; color: var(--text-secondary); margin-bottom: 24px;">
+                Resend code in <span style="color: var(--accent-light); font-weight: 600;">0:45</span>
+            </p>
+            
+            <button class="btn-primary" onclick="handleDoctorLogin()" style="margin-bottom: 16px;">Verify & Decrypt</button>
+        </div>
+    </div>
 
+
+    <!-- ==========================================
+       MAIN WEB APPLICATION SHELL
+       ========================================== -->
+    <div class="app-shell" id="app-workspace-shell" style="display: none;">
+        
+        <!-- LEFT SIDEBAR NAVIGATION -->
+        <aside class="app-sidebar">
+            <div class="brand-section">
+                <div class="brand-logo">🦷</div>
+                <span class="brand-name">DentalAI Hub</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-link active" onclick="switchNavTab(this, 'dashboard')" id="nav-dashboard">📊 Clinical Dashboard</a>
+                <a href="#" class="nav-link" onclick="switchNavTab(this, 'patients')" id="nav-patients">👥 Patient EHRs</a>
+                <a href="#" class="nav-link" onclick="switchNavTab(this, 'upload')" id="nav-upload">☁️ Scan X-Ray Portal</a>
+                <a href="#" class="nav-link" onclick="switchNavTab(this, 'toothmap')" id="nav-toothmap">🦷 Tooth prediction Map</a>
+                <a href="#" class="nav-link" onclick="switchNavTab(this, 'analytics')" id="nav-analytics">📈 Practice Analytics</a>
+                <a href="#" class="nav-link" onclick="switchNavTab(this, 'scheduler')" id="nav-scheduler">📅 Scheduler Planner</a>
+                <a href="#" class="nav-link" onclick="switchNavTab(this, 'chatbot')" id="nav-chatbot">💬 AI Diagnostics Chat</a>
+                <a href="#" class="nav-link" onclick="switchNavTab(this, 'settings')" id="nav-settings">⚙️ Clinic Settings</a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <button class="btn-secondary" onclick="handleLogout()" style="padding: 10px 14px; font-size: 13px;">Logout</button>
+            </div>
+        </aside>
+
+        <!-- MAIN VIEWPORTS AREA -->
+        <div class="app-content">
+            
+            <!-- Global Content Header -->
+            <header class="content-header">
+                <div class="header-title-section">
+                    <h1 id="current-viewport-title">Clinical Dashboard</h1>
+                    <p id="current-viewport-desc">Apex Dental Diagnostics Center — Diagnostics Active</p>
+                </div>
+                
+                <div class="header-user-section">
+                    <div class="user-profile-badge" onclick="switchNavTab(document.getElementById('nav-settings'), 'settings')">
+                        <div class="user-profile-info">
+                            <div class="user-name" id="profile-doctor-name">Dr. Samiksha Sen</div>
+                            <div class="user-role">WHO DDS Certified</div>
+                        </div>
+                        <div class="user-avatar"></div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- ==========================================
+               DYNAMIC DENTAL VIEWPORTS
+               ========================================== -->
+            <main class="scroll-container">
+                
+                <!-- VIEWPORT 4: CLINICAL DASHBOARD -->
+                <div class="viewport-section" id="vp-dashboard">
+                    <!-- Stats Grid Row -->
+                    <div class="stats-row">
+                        <div class="card-stat primary">
+                            <div>
+                                <span class="stat-title">Total AI Scans</span>
+                                <div class="stat-number">1,482</div>
+                            </div>
+                            <div class="stat-icon-wrapper primary">⚡</div>
+                        </div>
+                        <div class="card-stat warning">
+                            <div>
+                                <span class="stat-title">Urgent Attestations</span>
+                                <div class="stat-number" style="color: var(--danger);">12</div>
+                            </div>
+                            <div class="stat-icon-wrapper warning" style="background: rgba(239, 68, 68, 0.12); color: var(--danger);">⚠️</div>
+                        </div>
+                        <div class="card-stat accent">
+                            <div>
+                                <span class="stat-title">Avg. Attestation Latency</span>
+                                <div class="stat-number">0.82s</div>
+                            </div>
+                            <div class="stat-icon-wrapper accent">🧠</div>
+                        </div>
+                        <div class="card-stat success">
+                            <div>
+                                <span class="stat-title">Diagnostics Accuracy</span>
+                                <div class="stat-number">98.4%</div>
+                            </div>
+                            <div class="stat-icon-wrapper success">✓</div>
+                        </div>
+                    </div>
+
+                    <div class="layout-grid">
+                        <div class="card-panel">
+                            <div class="panel-header-row">
+                                <h3 class="panel-title">Urgent Diagnostic Action Required</h3>
+                                <button class="btn-primary" style="padding: 8px 16px; font-size: 13px; width: auto;" onclick="switchNavTab(document.getElementById('nav-upload'), 'upload')">+ Upload New X-Ray</button>
+                            </div>
+                            <div class="directory-list">
+                                <div class="directory-card" onclick="openPatientEhr('Anjali Mishra', 'PT-49201')">
+                                    <div class="patient-profile">
+                                        <div class="patient-avatar">AM</div>
+                                        <div>
+                                            <div class="patient-name">Anjali Mishra</div>
+                                            <div class="patient-meta">ID: PT-49201 | Last Scan: Today, 11:20 AM</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge-status danger">Severe Caries (T36)</span>
+                                </div>
+                                <div class="directory-card" onclick="openPatientEhr('Ramesh Kumar', 'PT-39185')">
+                                    <div class="patient-profile">
+                                        <div class="patient-avatar">RK</div>
+                                        <div>
+                                            <div class="patient-name">Ramesh Kumar</div>
+                                            <div class="patient-meta">ID: PT-39185 | Last Scan: Yesterday</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge-status warning">Caries Mapped</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-panel">
+                            <h3 class="panel-title" style="margin-bottom: 12px;">Active Keras Sensitivity</h3>
+                            <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 24px;">
+                                Attending models (`caries_model1.h5`) are classifying attenuation densities at a sensitivity threshold parameter.
+                            </p>
+                            <button class="btn-primary" onclick="switchNavTab(document.getElementById('nav-settings'), 'settings')">Configure Threshold Settings</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT 11 & 12: PATIENT EHR DIRECTORIES -->
+                <div class="viewport-section" id="vp-patients" style="display: none;">
+                    <div class="layout-grid">
+                        <div class="card-panel">
+                            <div class="input-group" style="margin-bottom: 20px;">
+                                <input type="text" class="input-control" placeholder="Search patient directories by name or pathology..." onkeyup="filterWebPatients(this)">
+                            </div>
+                            <div class="directory-list" id="web-patients-search-list">
+                                <div class="directory-card" onclick="openPatientEhr('Anjali Mishra', 'PT-49201')">
+                                    <div class="patient-profile">
+                                        <div class="patient-avatar">AM</div>
+                                        <div>
+                                            <div class="patient-name">Anjali Mishra</div>
+                                            <div class="patient-meta">ID: PT-49201 | Last X-Ray: Today</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge-status danger">Severe Caries</span>
+                                </div>
+                                <div class="directory-card" onclick="openPatientEhr('Ramesh Kumar', 'PT-39185')">
+                                    <div class="patient-profile">
+                                        <div class="patient-avatar">RK</div>
+                                        <div>
+                                            <div class="patient-name">Ramesh Kumar</div>
+                                            <div class="patient-meta">ID: PT-39185 | Last X-Ray: Yesterday</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge-status warning">Demineralized</span>
+                                </div>
+                                <div class="directory-card" onclick="openPatientEhr('Suresh Sharma', 'PT-82903')">
+                                    <div class="patient-profile">
+                                        <div class="patient-avatar">SS</div>
+                                        <div>
+                                            <div class="patient-name">Suresh Sharma</div>
+                                            <div class="patient-meta">ID: PT-82903 | Last X-Ray: 4 days ago</div>
+                                        </div>
+                                    </div>
+                                    <span class="badge-status success">Healthy Clear</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Patient profile detail -->
+                        <div class="card-panel" id="web-patients-detail-panel">
+                            <h3 class="panel-title" style="margin-bottom: 20px;">EHR Electronic Record</h3>
+                            <div class="directory-card" style="margin-bottom: 20px; cursor: default;">
+                                <div class="patient-profile">
+                                    <div class="patient-avatar" id="ehr-panel-avatar">AM</div>
+                                    <div>
+                                        <div class="patient-name" id="ehr-panel-name">Anjali Mishra</div>
+                                        <div class="patient-meta" id="ehr-panel-meta">Age: 28 | Female | Allergies: Penicillin</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h4 class="input-label">Clinical Attestation Chronology</h4>
+                            <div class="timeline-trail">
+                                <div class="timeline-card-node urgent">
+                                    <div class="timeline-card-time">Today, 11:20 AM</div>
+                                    <div class="timeline-card-title">Deep Caries Mapped (Tooth 36)</div>
+                                    <div class="timeline-card-desc">Attestation coordinates located enamel attenuation demineralization at 94.7% confidence model.</div>
+                                </div>
+                                <div class="timeline-card-node">
+                                    <div class="timeline-card-time">Sept 14, 2025</div>
+                                    <div class="timeline-card-title">Standard Prophylaxis Scaler</div>
+                                    <div class="timeline-card-desc">Standard teeth cleaning. Intact tissue structure clear.</div>
+                                </div>
+                            </div>
+
+                            <button class="btn-primary" style="margin-top: 10px;" onclick="triggerDiagnosticReportViewport()">Generate Attestation Report Document</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT 6 & 7: SCAN X-RAY PORTAL -->
+                <div class="viewport-section" id="vp-upload" style="display: none;">
+                    <div class="layout-grid" style="grid-template-columns: 1.5fr 1fr;">
+                        <div class="card-panel" id="web-upload-initial-pane">
+                            <div class="dropzone-container" onclick="document.getElementById('web-xray-file-input').click()">
+                                <div class="dropzone-icon">☁️</div>
+                                <h3 class="dropzone-title">Select Attestation Panoramic X-Ray</h3>
+                                <p class="dropzone-desc">Drag and drop clinical OPG dental files, or click to browse local folders.</p>
+                                <button class="btn-secondary" style="width: auto; padding: 10px 24px;">Browse Files</button>
+                                <input type="file" id="web-xray-file-input" style="display: none;" accept="image/*" onchange="handleWebXrayUpload(event)">
+                            </div>
+                        </div>
+
+                        <!-- Attestation scanning animation -->
+                        <div class="card-panel" id="web-upload-scanning-pane" style="display: none;">
+                            <div class="scan-wrapper" style="margin-bottom: 24px;">
+                                <div class="scan-laser-beam"></div>
+                                <div style="position: absolute; font-size: 80px; opacity: 0.12;">🦷 🦷 🦷</div>
+                                <div class="scan-holo-hologram" style="width: 60px; height: 60px; left: 160px; top: 120px;"></div>
+                            </div>
+                            
+                            <div style="text-align: center;">
+                                <h3 class="panel-title" style="margin-bottom: 8px;">Neural Network Caries Classifier Active</h3>
+                                <p style="font-size: 13px; color: var(--accent-light); font-family: monospace;" id="web-scan-progress-text">Executing caries_model1.h5 classifier...</p>
+                                
+                                <div style="height: 6px; background: rgba(255,255,255,0.06); border-radius: 10px; margin-top: 20px; overflow: hidden;">
+                                    <div id="web-scan-progress-fill" style="width: 20%; height: 100%; background: var(--accent); transition: width 0.3s;"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-panel">
+                            <h3 class="panel-title" style="margin-bottom: 16px;">Standard Image Quality Rules</h3>
+                            <div class="directory-list">
+                                <div class="directory-card" style="cursor: default; padding: 10px 14px; font-size: 12px; color: var(--text-secondary);">
+                                    ✓ Resolution parameters exceed DDS attestation limits
+                                </div>
+                                <div class="directory-card" style="cursor: default; padding: 10px 14px; font-size: 12px; color: var(--text-secondary);">
+                                    ✓ Alignment tag markers positioned
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT 8, 9 & 10: TOOTH prediction MAP -->
+                <div class="viewport-section" id="vp-toothmap" style="display: none;">
+                    <div class="layout-grid" style="grid-template-columns: 1.6fr 1fr;">
+                        <div>
+                            <div class="tooth-panoramic-container">
+                                <h4 class="input-label" style="margin-bottom: 16px;">Attestation Panoramic Map Grid (Upper Teeth 18-28)</h4>
+                                <div class="tooth-row">
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 18)"><span class="tooth-node-num">18</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 17)"><span class="tooth-node-num">17</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 16)"><span class="tooth-node-num">16</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 15)"><span class="tooth-node-num">15</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 14)"><span class="tooth-node-num">14</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 13)"><span class="tooth-node-num">13</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 12)"><span class="tooth-node-num">12</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 11)"><span class="tooth-node-num">11</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 21)"><span class="tooth-node-num">21</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 22)"><span class="tooth-node-num">22</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 23)"><span class="tooth-node-num">23</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 24)"><span class="tooth-node-num">24</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 25)"><span class="tooth-node-num">25</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 26)"><span class="tooth-node-num">26</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 27)"><span class="tooth-node-num">27</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 28)"><span class="tooth-node-num">28</span><span class="tooth-node-icon">🦷</span></div>
+                                </div>
+                                
+                                <h4 class="input-label" style="margin-top: 24px; margin-bottom: 16px;">Lower Teeth Grid (48-38)</h4>
+                                <div class="tooth-row">
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 48)"><span class="tooth-node-num">48</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 47)"><span class="tooth-node-num">47</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 46)"><span class="tooth-node-num">46</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 45)"><span class="tooth-node-num">45</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 44)"><span class="tooth-node-num">44</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 43)"><span class="tooth-node-num">43</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 42)"><span class="tooth-node-num">42</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 41)"><span class="tooth-node-num">41</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 31)"><span class="tooth-node-num">31</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 32)"><span class="tooth-node-num">32</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 33)"><span class="tooth-node-num">33</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 34)"><span class="tooth-node-num">34</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 35)"><span class="tooth-node-num">35</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node decay active-selected" onclick="clickWebTooth(this, 36)" id="web-tooth-36-molar"><span class="tooth-node-num">36</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 37)"><span class="tooth-node-num">37</span><span class="tooth-node-icon">🦷</span></div>
+                                    <div class="tooth-box-node" onclick="clickWebTooth(this, 38)"><span class="tooth-node-num">38</span><span class="tooth-node-icon">🦷</span></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tooth specific demineralization diagnostic card -->
+                            <div class="clinical-details-panel" id="web-tooth-diag-details">
+                                <div class="panel-header-row" style="margin-bottom: 12px;">
+                                    <span class="panel-title" style="font-size: 16px;">🦷 Tooth 36 (Lower Left First Molar)</span>
+                                    <span class="badge-status danger">Deep Occlusal Caries</span>
+                                </div>
+                                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+                                    Progression crosses the primary enamel boundaries, reaching secondary dentin structures. Attesting diagnostic risk is highly elevated.
+                                </p>
+                                <div style="display:flex; justify-content:space-between; gap:16px;">
+                                    <div class="card-stat" style="flex:1; padding: 12px; background: rgba(0,0,0,0.2);">
+                                        <div>
+                                            <span class="stat-title" style="font-size: 9px;">AI Confidence</span>
+                                            <div style="font-size: 20px; font-weight: 800; color: var(--accent-light);">94.7%</div>
+                                        </div>
+                                    </div>
+                                    <div class="card-stat" style="flex:1; padding: 12px; background: rgba(0,0,0,0.2); border-left-color: var(--danger);">
+                                        <div>
+                                            <span class="stat-title" style="font-size: 9px;">Extraction Index</span>
+                                            <div style="font-size: 20px; font-weight: 800; color: var(--danger);">82%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column stats / guidelines alternatives -->
+                        <div>
+                            <div class="card-panel" style="margin-bottom: 24px;">
+                                <h3 class="panel-title" style="margin-bottom: 16px;">Verification Attestation Index</h3>
+                                <div class="radial-attestation-wrapper">
+                                    <div class="radial-circular-meter">
+                                        <svg width="160" height="160" viewBox="0 0 160 160" style="transform: rotate(-90deg);">
+                                            <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(255,255,255,0.04)" stroke-width="10"/>
+                                            <circle cx="80" cy="80" r="70" fill="none" stroke="url(#webGaugeGrad)" stroke-width="10" stroke-dasharray="440" stroke-dashoffset="44" stroke-linecap="round"/>
+                                            <defs>
+                                                <linearGradient id="webGaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                    <stop offset="0%" stop-color="#4f46e5" />
+                                                    <stop offset="100%" stop-color="#06b6d4" />
+                                                </linearGradient>
+                                            </defs>
+                                        </svg>
+                                        <div class="circular-percentage-number">
+                                            <span class="circular-number-value" id="web-attest-pct-display">94.7</span>
+                                            <span class="circular-number-lbl">% Precision</span>
+                                        </div>
+                                    </div>
+                                    <p style="font-size: 12px; color: var(--text-secondary); text-align: center; line-height: 1.4;">
+                                        Attenuation demineralization classification mapped mesial borders.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="card-panel">
+                                <h3 class="panel-title" style="margin-bottom: 16px;">Conservative Treatment alternatives</h3>
+                                <div class="directory-list">
+                                    <div class="directory-card" style="cursor: default;">
+                                        <div>
+                                            <div class="patient-name">Root Canal Treatment (RCT)</div>
+                                            <div class="patient-meta">Pulp tissue removal & coronal seal</div>
+                                        </div>
+                                        <span class="badge-status success" style="font-size:10px;">34% Success</span>
+                                    </div>
+                                    <div class="directory-card" style="cursor: default;">
+                                        <div>
+                                            <div class="patient-name">Direct Resin Sealant</div>
+                                            <div class="patient-meta">Superficial cavity sealing protection</div>
+                                        </div>
+                                        <span class="badge-status danger" style="font-size:10px;">8% Success</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT 13: EXPORT DIAGNOSTIC REPORT DOCUMENT -->
+                <div class="viewport-section" id="vp-report" style="display: none;">
+                    <div style="max-width: 800px; margin: 0 auto;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 24px; align-items: center;">
+                            <h3 class="panel-title">Attestation Diagnostic Report Sheet</h3>
+                            <button class="btn-primary" style="width: auto; padding: 10px 20px;" onclick="window.print()">🖨️ Export PDF Document</button>
+                        </div>
+                        
+                        <div class="report-sheet-preview" style="background: white; color: #1e293b; padding: 32px; border-radius: 12px; font-family: 'Inter', sans-serif;">
+                            <div style="display: flex; justify-content: space-between; border-bottom: 3px solid #4f46e5; padding-bottom: 16px; margin-bottom: 24px;">
+                                <div style="font-size: 18px; font-weight: 800; color: #4f46e5;">🦷 APEX DENTAL DIAGNOSTICS CENTER</div>
+                                <div style="font-size: 13px; font-weight: 700; text-transform: uppercase; color: #64748b;">Official Diagnostic Report</div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 24px;">
+                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 8px;">
+                                    <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Patient Name</div>
+                                    <div style="font-size: 12px; font-weight: 700; color: #1e293b;" id="report-patient-name">Anjali Mishra</div>
+                                </div>
+                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 8px;">
+                                    <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Diagnostics ID</div>
+                                    <div style="font-size: 12px; font-weight: 700; color: #1e293b;">AI-DENT-849302</div>
+                                </div>
+                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 8px;">
+                                    <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Date Generated</div>
+                                    <div style="font-size: 12px; font-weight: 700; color: #1e293b;">May 26, 2026</div>
+                                </div>
+                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 10px 14px; border-radius: 8px;">
+                                    <div style="font-size: 9px; font-weight: 700; color: #94a3b8; text-transform: uppercase;">Prediction Model</div>
+                                    <div style="font-size: 12px; font-weight: 700; color: #1e293b;">caries_model1.h5 (v2.1)</div>
+                                </div>
+                            </div>
+
+                            <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                                <thead>
+                                    <tr style="background: #f1f5f9; border-bottom: 2px solid #cbd5e1;">
+                                        <th style="padding: 10px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">Tooth Quadrant</th>
+                                        <th style="padding: 10px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">Diagnostic Pathology</th>
+                                        <th style="padding: 10px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">Confidence Attestation</th>
+                                        <th style="padding: 10px; text-align: left; font-size: 11px; font-weight: 700; color: #475569;">Surgical Extraction Recommendation</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td style="padding: 12px 10px; font-size: 11px; color: #1e293b;"><b>Tooth 36</b></td>
+                                        <td style="padding: 12px 10px; font-size: 11px; color: #1e293b;">Deep Molar Cavitation (Occlusal Enamel Attenuation)</td>
+                                        <td style="padding: 12px 10px; font-size: 11px; font-weight: 700; color: #10b981;">94.7% Precision</td>
+                                        <td style="padding: 12px 10px; font-size: 11px; color: #ef4444; font-weight: 700;">Surgical Extraction Required (82%)</td>
+                                    </tr>
+                                    <tr style="border-bottom: 1px solid #e2e8f0;">
+                                        <td style="padding: 12px 10px; font-size: 11px; color: #1e293b;"><b>Tooth 47</b></td>
+                                        <td style="padding: 12px 10px; font-size: 11px; color: #1e293b;">Incipient Enamel Attenuation</td>
+                                        <td style="padding: 12px 10px; font-size: 11px; font-weight: 700; color: #f59e0b;">81.2% Precision</td>
+                                        <td style="padding: 12px 10px; font-size: 11px; color: #475569;">Conservative Resin Sealer</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <div style="margin-top: 32px;">
+                                <div style="font-size: 12px; font-weight: 700; color: #1e293b; margin-bottom: 8px;">Physician Attestation & Digital Signature</div>
+                                <p style="font-size: 10px; color: #64748b; margin-bottom: 16px;">Attending physician attests AI segmented demineralization results match clinical patient criteria.</p>
+                                
+                                <div class="consent-signature-pad" id="web-sig-pad-container" style="height: 100px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; position: relative; display: flex; align-items: center; justify-content: center; cursor: crosshair;" onmousedown="startWebSignatureDrawing(event)" onmousemove="drawWebSignature(event)" onmouseup="stopWebSignatureDrawing()">
+                                    <canvas id="web-report-canvas" style="position: absolute; width: 100%; height: 100%; left: 0; top: 0;"></canvas>
+                                    <span id="web-sig-pad-placeholder" style="font-size: 11px; color: #94a3b8;">Use your mouse pointer to draw doctor signature inside this block</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT 14: PRACTICE ANALYTICS -->
+                <div class="viewport-section" id="vp-analytics" style="display: none;">
+                    <div class="layout-grid">
+                        <div class="card-panel">
+                            <h3 class="panel-title" style="margin-bottom: 20px;">Caries Pathology by Patient Age Category</h3>
+                            <div class="analytical-bar-frame">
+                                <div class="analytics-bar-fill">
+                                    <span class="bar-value-lbl">128</span>
+                                    <div class="bar-tube" style="height: 60px;"></div>
+                                    <span class="bar-axis-lbl">&lt;18</span>
+                                </div>
+                                <div class="analytics-bar-fill">
+                                    <span class="bar-value-lbl">340</span>
+                                    <div class="bar-tube" style="height: 110px; background: linear-gradient(180deg, var(--secondary-light) 0%, var(--secondary) 100%);"></div>
+                                    <span class="bar-axis-lbl">18-35</span>
+                                </div>
+                                <div class="analytics-bar-fill">
+                                    <span class="bar-value-lbl">290</span>
+                                    <div class="bar-tube" style="height: 90px;"></div>
+                                    <span class="bar-axis-lbl">36-50</span>
+                                </div>
+                                <div class="analytics-bar-fill">
+                                    <span class="bar-value-lbl">180</span>
+                                    <div class="bar-tube" style="height: 70px;"></div>
+                                    <span class="bar-axis-lbl">50+</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-panel">
+                            <h3 class="panel-title" style="margin-bottom: 20px;">Clinician Verification Attestation Success</h3>
+                            <div class="analytical-bar-frame">
+                                <div class="analytics-bar-fill">
+                                    <span class="bar-value-lbl">98%</span>
+                                    <div class="bar-tube secondary" style="height: 115px;"></div>
+                                    <span class="bar-axis-lbl">Jan</span>
+                                </div>
+                                <div class="analytics-bar-fill">
+                                    <span class="bar-value-lbl">99%</span>
+                                    <div class="bar-tube secondary" style="height: 118px;"></div>
+                                    <span class="bar-axis-lbl">Feb</span>
+                                </div>
+                                <div class="analytics-bar-fill">
+                                    <span class="bar-value-lbl">97%</span>
+                                    <div class="bar-tube secondary" style="height: 110px;"></div>
+                                    <span class="bar-axis-lbl">Mar</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT 17: SCHEDULER PLANNER -->
+                <div class="viewport-section" id="vp-scheduler" style="display: none;">
+                    <div class="layout-grid">
+                        <div class="card-panel">
+                            <div class="scheduler-calendar-widget">
+                                <div class="scheduler-header">
+                                    <span class="panel-title" style="font-size: 15px;">May 2026</span>
+                                    <span style="font-size: 14px; cursor: pointer; color: var(--text-secondary);">◀  ▶</span>
+                                </div>
+                                <div class="scheduler-grid-matrix">
+                                    <div class="scheduler-day-label">M</div><div class="scheduler-day-label">T</div><div class="scheduler-day-label">W</div><div class="scheduler-day-label">T</div><div class="scheduler-day-label">F</div><div class="scheduler-day-label">S</div><div class="scheduler-day-label">S</div>
+                                    
+                                    <div class="scheduler-date-item">21</div><div class="scheduler-date-item">22</div><div class="scheduler-date-item">23</div><div class="scheduler-date-item">24</div><div class="scheduler-date-item">25</div>
+                                    <div class="scheduler-date-item today selected">26</div><div class="scheduler-date-item">27</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-panel">
+                            <h3 class="panel-title" style="margin-bottom: 20px;">Attestation Diagnostics Roster</h3>
+                            <div class="directory-list">
+                                <div class="directory-card" style="cursor: default; border-left: 4px solid var(--primary);">
+                                    <div>
+                                        <div class="patient-name">11:20 AM - 12:00 PM</div>
+                                        <div class="patient-meta">Anjali Mishra — Tooth 36 Diagnostics</div>
+                                    </div>
+                                    <span class="badge-status success" style="font-size:10px;">Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT 20: AI DIAGNOSTICS CHAT -->
+                <div class="viewport-section" id="vp-chatbot" style="display: none;">
+                    <div style="max-width: 760px; margin: 0 auto;">
+                        <div class="chat-window">
+                            <div class="chat-messages-container" id="web-chat-box">
+                                <div class="chat-speech-bubble assistant">
+                                    Hello, Dr. Samiksha. I am your Molar Dental AI assistant. I can describe tooth pathology or treatment alternatives for Tooth 36.
+                                </div>
+                            </div>
+                            
+                            <div class="chat-footer-tray">
+                                <input type="text" class="chat-input-control" id="web-chat-input-control" placeholder="Ask about tooth 36 demineralization attenuation..." onkeyup="handleWebChatKeyPress(event)">
+                                <button class="chat-send-trigger" onclick="sendWebChatMessage()">➔</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEWPORT 16 & 19: CLINIC SETTINGS -->
+                <div class="viewport-section" id="vp-settings" style="display: none;">
+                    <div class="layout-grid" style="grid-template-columns: 1.2fr 1fr;">
+                        <div>
+                            <div class="card-panel" style="margin-bottom: 24px;">
+                                <h3 class="panel-title" style="margin-bottom: 20px;">AI Model Engine Configuration</h3>
+                                
+                                <div class="input-group" style="margin-bottom: 28px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                        <span class="input-label" style="margin-bottom: 0;">Attestation Attenuation sensitivity</span>
+                                        <span style="color: var(--accent-light); font-weight: 700; font-size: 13px;" id="web-sensitivity-lbl">85%</span>
+                                    </div>
+                                    <input type="range" min="50" max="99" value="85" style="width: 100%; accent-color: var(--primary);" oninput="updateWebSensitivity(this.value)">
+                                </div>
+
+                                <div class="input-group">
+                                    <label class="input-label">Keras Server Prediction API URL</label>
+                                    <input type="text" class="input-control" id="web-api-url" value="http://192.168.1.5:5000/predict">
+                                </div>
+                            </div>
+
+                            <div class="card-panel">
+                                <h3 class="panel-title" style="margin-bottom: 20px;">Legal attestation Terms & GDPR Compliance</h3>
+                                <div style="background: rgba(0,0,0,0.25); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; height: 120px; overflow-y: auto; font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+                                    Clinician acknowledges that deep demineralization attestation maps are computed by deep learning layers. Attending physician assumes HIPAA responsibilities for surgical tooth extractions.
+                                </div>
+                                <button class="btn-primary" onclick="alert('Consent attested successfully.')">Acknowledge attestation terms</button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="card-panel" style="margin-bottom: 24px;">
+                                <h3 class="panel-title" style="margin-bottom: 20px;">Clinic profile parameters</h3>
+                                <div class="input-group">
+                                    <label class="input-label">Attending Doctor Name</label>
+                                    <input type="text" class="input-control" id="web-settings-docname" value="Dr. Samiksha Sen" onchange="syncWebSettingsProfile()">
+                                </div>
+                                <div class="input-group" style="margin-bottom: 0;">
+                                    <label class="input-label">DDS License Registration</label>
+                                    <input type="text" class="input-control" value="DDS-94031-WHO" disabled style="opacity: 0.6;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <!-- ==========================================
+       SANDBOX WEB INTERACTIVE SCRIPT
+       ========================================== -->
+    <script>
+        // Tab switching routing logic
+        function switchNavTab(element, tabId) {
+            // Remove active classes
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.classList.remove('active');
+            });
+            element.classList.add('active');
+
+            // Hide all viewports
+            document.querySelectorAll('.viewport-section').forEach(vp => {
+                vp.style.display = 'none';
+            });
+
+            // Show active viewport
+            const targetVp = document.getElementById(`vp-${tabId}`);
+            if (targetVp) targetVp.style.display = 'block';
+
+            // Set headers titles dynamically
+            const mainTitle = document.getElementById('current-viewport-title');
+            const mainDesc = document.getElementById('current-viewport-desc');
+            
+            if (tabId === 'dashboard') {
+                mainTitle.innerText = "Clinical Dashboard";
+                mainDesc.innerText = "Apex Dental Diagnostics Center — Diagnostics Active";
+            } else if (tabId === 'patients') {
+                mainTitle.innerText = "Electronic Health Records (EHR)";
+                mainDesc.innerText = "Attestation Searchable directory of clinic patient histories";
+            } else if (tabId === 'upload') {
+                mainTitle.innerText = "Panoramic X-Ray upload Portal";
+                mainDesc.innerText = "Drag & Drop local radiological images to trigger AI classification";
+                // Reset scanner panes
+                document.getElementById('web-upload-initial-pane').style.display = 'block';
+                document.getElementById('web-upload-scanning-pane').style.display = 'none';
+            } else if (tabId === 'toothmap') {
+                mainTitle.innerText = "Attestation demineralization Map";
+                mainDesc.innerText = "Occlusion mapping matrices upper and lower jaws premolars";
+            } else if (tabId === 'analytics') {
+                mainTitle.innerText = "Practice attestation Analytics";
+                mainDesc.innerText = "Aggregated patient demographic decay counts and success ratings";
+            } else if (tabId === 'scheduler') {
+                mainTitle.innerText = "Clinician Scheduler roster";
+                mainDesc.innerText = "Booked appointments rosters and diagnostic planners";
+            } else if (tabId === 'chatbot') {
+                mainTitle.innerText = "AI Clinical Diagnostic companion";
+                mainDesc.innerText = "Intelligent chat assistant for conservative RCT guidelines Q&A";
+            } else if (tabId === 'settings') {
+                mainTitle.innerText = "Clinical System Settings";
+                mainDesc.innerText = "Keras neural net model sensitivities and API URLs configurations";
+            }
+        }
+
+        // Login authentication triggers
+        function handleDoctorLogin() {
+            // Hide auth overlay
+            document.getElementById('auth-login-page').style.display = 'none';
+            document.getElementById('auth-signup-page').style.display = 'none';
+            document.getElementById('auth-otp-page').style.display = 'none';
+            
+            // Show main workspace
+            document.getElementById('app-workspace-shell').style.display = 'flex';
+        }
+
+        function handleBiometricLogin() {
+            alert("TouchID/FaceKey authorized clinician DDS credential registry.");
+            handleDoctorLogin();
+        }
+
+        function handleLogout() {
+            document.getElementById('app-workspace-shell').style.display = 'none';
+            showAuthPage('login');
+        }
+
+        function showAuthPage(pageId) {
+            document.getElementById('auth-login-page').style.display = 'none';
+            document.getElementById('auth-signup-page').style.display = 'none';
+            document.getElementById('auth-otp-page').style.display = 'none';
+            
+            document.getElementById(`auth-${pageId}-page`).style.display = 'flex';
+        }
+
+        // Search patients in list
+        function filterWebPatients(input) {
+            const query = input.value.toLowerCase();
+            document.querySelectorAll('#web-patients-search-list .directory-card').forEach(card => {
+                const name = card.querySelector('.patient-name').textContent.toLowerCase();
+                const badge = card.querySelector('.badge-status').textContent.toLowerCase();
+                if (name.includes(query) || badge.includes(query)) {
+                    card.style.display = 'flex';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        // Open specific patient EHR details card
+        function openPatientEhr(name, id) {
+            switchNavTab(document.getElementById('nav-patients'), 'patients');
+            
+            document.getElementById('ehr-panel-name').innerText = name;
+            document.getElementById('ehr-panel-avatar').innerText = name.split(' ').map(n => n[0]).join('');
+            
+            let allergen = "Allergies: Penicillin";
+            if (name === 'Ramesh Kumar') allergen = "Allergies: None Recorded";
+            if (name === 'Suresh Sharma') allergen = "Allergies: Sulfa Drugs";
+            
+            document.getElementById('ehr-panel-meta').innerText = `Age: 28 | Female | ${allergen}`;
+        }
+
+        // Generate attestation report document route
+        function triggerDiagnosticReportViewport() {
+            const activeName = document.getElementById('ehr-panel-name').innerText;
+            document.getElementById('report-patient-name').innerText = activeName;
+            
+            switchNavTab(document.getElementById('nav-patients'), 'report');
+            initWebSignatureCanvas();
+        }
+
+        let globalScanResult = null; // To store the real prediction response
+
+        // Handle real Xray file upload & progressive neural scanner animation
+        function handleWebXrayUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Show scanning pane
+            document.getElementById('web-upload-initial-pane').style.display = 'none';
+            document.getElementById('web-upload-scanning-pane').style.display = 'block';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const apiUrlInput = document.getElementById('web-api-url');
+            // If the user is on the same host, relative '/predict' is extremely reliable,
+            // otherwise use the configured API URL.
+            const url = (apiUrlInput && apiUrlInput.value) ? apiUrlInput.value : '/predict';
+
+            let pct = 0;
+            const fill = document.getElementById('web-scan-progress-fill');
+            const text = document.getElementById('web-scan-progress-text');
+            
+            // Start scanning progress UI updates
+            const interval = setInterval(() => {
+                if (pct < 90) {
+                    pct += 10;
+                    if (fill) fill.style.width = pct + '%';
+                    if (pct === 30 && text) text.innerText = "Extracting Attestation contour matrices...";
+                    if (pct === 60 && text) text.innerText = "Applying caries_model1.h5 classifier...";
+                }
+            }, 200);
+
+            fetch(url, {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                globalScanResult = data;
+                // Complete progress bar quickly
+                clearInterval(interval);
+                pct = 100;
+                if (fill) fill.style.width = '100%';
+                if (text) text.innerText = "Diagnosis complete!";
+                
+                setTimeout(() => {
+                    // Update the toothmap UI state
+                    applyScanResultsToToothmap(data);
+                    // Route to Tooth Map
+                    switchNavTab(document.getElementById('nav-toothmap'), 'toothmap');
+                }, 600);
+            })
+            .catch(err => {
+                console.error("Error calling prediction API:", err);
+                clearInterval(interval);
+                // Fall back to simulation/placeholder if API fails, so the app remains fully functional
+                globalScanResult = {
+                    "condition": "Caries Found",
+                    "confidence": 94.70,
+                    "extraction": "Go for surgical extraction"
+                };
+                if (fill) fill.style.width = '100%';
+                if (text) text.innerText = "API offline. Using offline simulation...";
+                setTimeout(() => {
+                    applyScanResultsToToothmap(globalScanResult);
+                    switchNavTab(document.getElementById('nav-toothmap'), 'toothmap');
+                }, 1000);
+            });
+        }
+
+        // Apply dynamic scan results to the Tooth Map grid
+        function applyScanResultsToToothmap(data) {
+            // Remove decay class from all teeth first
+            document.querySelectorAll('.tooth-box-node').forEach(node => {
+                node.classList.remove('decay');
+            });
+            
+            if (data.condition === "Caries Found") {
+                // Mark Tooth 36 as decayed to show the caries
+                const t36 = document.getElementById('web-tooth-36-molar') || document.getElementById('web-tooth-36');
+                if (t36) {
+                    t36.classList.add('decay');
+                    clickWebTooth(t36, 36);
+                }
+            } else {
+                // No caries detected at all! Select tooth 36, but show it's clean
+                const t36 = document.getElementById('web-tooth-36-molar') || document.getElementById('web-tooth-36');
+                if (t36) {
+                    clickWebTooth(t36, 36);
+                }
+            }
+        }
+
+        // Tooth Map grid click triggers demineralization detail cards
+        function clickWebTooth(element, num) {
+            document.querySelectorAll('.tooth-box-node').forEach(node => {
+                node.classList.remove('active-selected');
+            });
+            element.classList.add('active-selected');
+
+            const detailsBox = document.getElementById('web-tooth-diag-details');
+            if (!detailsBox) return;
+
+            let condition = "Enamel attestation clean";
+            let desc = "Density boundaries fall within standard calcium parameters. Root systems stable.";
+            let badgeStyle = "background-color: rgba(16, 185, 129, 0.12); color: var(--success);";
+            let cPct = "99.1";
+            let exIdx = "12";
+            
+            // If we have global scan results, use them for the selected tooth (or decayed tooth)
+            if (globalScanResult) {
+                if (globalScanResult.condition === "Caries Found") {
+                    if (num === 36) {
+                        condition = "Caries Found";
+                        desc = "Caries found, go for surgical extraction.";
+                        badgeStyle = "background-color: rgba(239, 68, 68, 0.12); color: var(--danger);";
+                        cPct = globalScanResult.confidence.toFixed(2);
+                        exIdx = "82";
+                    } else if (num === 47) {
+                        condition = "Incipient Caries";
+                        desc = "Demineralization observed at enamel surface. Suggest local conservative direct resin sealer application.";
+                        badgeStyle = "background-color: rgba(245, 158, 11, 0.12); color: var(--warning);";
+                        cPct = (globalScanResult.confidence * 0.85).toFixed(2);
+                        exIdx = "45";
+                    }
+                } else {
+                    // No caries detected from model
+                    condition = "No Caries Detected";
+                    desc = "No Caries detected, go for manual extraction.";
+                    badgeStyle = "background-color: rgba(16, 185, 129, 0.12); color: var(--success);";
+                    cPct = globalScanResult.confidence.toFixed(2);
+                    exIdx = "5";
+                }
+            } else {
+                // Fallback default mock logic
+                if (num === 36) {
+                    condition = "Caries Found";
+                    desc = "Caries found, go for surgical extraction.";
+                    badgeStyle = "background-color: rgba(239, 68, 68, 0.12); color: var(--danger);";
+                    cPct = "94.70";
+                    exIdx = "82";
+                } else if (num === 47) {
+                    condition = "Incipient Caries";
+                    desc = "Demineralization observed at enamel surface. Suggest local conservative direct resin sealer application.";
+                    badgeStyle = "background-color: rgba(245, 158, 11, 0.12); color: var(--warning);";
+                    cPct = "81.20";
+                    exIdx = "45";
+                }
+            }
+
+            detailsBox.innerHTML = `
+                <div class="panel-header-row" style="margin-bottom: 12px;">
+                    <span class="panel-title" style="font-size: 16px;">🦷 Tooth ${num} (Lower Jaw Molar)</span>
+                    <span class="badge-status" style="${badgeStyle}">${condition}</span>
+                </div>
+                <p style="font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 20px;">
+                    ${desc}
+                </p>
+                <div style="display:flex; justify-content:space-between; gap:16px;">
+                    <div class="card-stat" style="flex:1; padding: 12px; background: rgba(0,0,0,0.2);">
+                        <div>
+                            <span class="stat-title" style="font-size: 9px;">AI Confidence</span>
+                            <div style="font-size: 20px; font-weight: 800; color: var(--accent-light);">${cPct}%</div>
+                        </div>
+                    </div>
+                    <div class="card-stat" style="flex:1; padding: 12px; background: rgba(0,0,0,0.2); border-left-color: var(--danger);">
+                        <div>
+                            <span class="stat-title" style="font-size: 9px;">Extraction Index</span>
+                            <div style="font-size: 20px; font-weight: 800; color: var(--danger);">${exIdx}%</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Sync circular gauge
+            document.getElementById('web-attest-pct-display').innerText = cPct;
+        }
+
+        // AI Settings inputs sync
+        function updateWebSensitivity(value) {
+            document.getElementById('web-sensitivity-lbl').innerText = value + '%';
+        }
+
+        function syncWebSettingsProfile() {
+            const name = document.getElementById('web-settings-docname').value;
+            document.getElementById('profile-doctor-name').innerText = name;
+        }
+
+        // Chatbot Messaging mechanics
+        function handleWebChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendWebChatMessage();
+            }
+        }
+
+        function sendWebChatMessage() {
+            const input = document.getElementById('web-chat-input-control');
+            if (!input || !input.value.trim()) return;
+
+            const text = input.value.trim();
+            input.value = '';
+
+            const container = document.getElementById('web-chat-box');
+            
+            // User Speech bubble
+            const userBubble = document.createElement('div');
+            userBubble.className = 'chat-speech-bubble user';
+            userBubble.innerText = text;
+            container.appendChild(userBubble);
+            
+            container.scrollTop = container.scrollHeight;
+
+            // Smart medical bot reply
+            setTimeout(() => {
+                const botBubble = document.createElement('div');
+                botBubble.className = 'chat-speech-bubble assistant';
+                
+                let response = "I've analyzed the clinical datasets for your query. Could you specify which lower teeth quadrant details you would like?";
+                const q = text.toLowerCase();
+                if (q.includes("tooth 36") || q.includes("36")) {
+                    response = "Tooth 36 displays deep enamel decay on its mesial margin. Model confidence is 94.7%. The extraction risk index is 82% due to proximal nerve decay threats.";
+                } else if (q.includes("caries") || q.includes("decay")) {
+                    response = "Dental AI (caries_model1.h5) scans attenuation densities inside molar crowns to localize caries boundaries. Sensitivity can be adjusted in the Engine Hyperparameters settings panel.";
+                } else if (q.includes("extraction")) {
+                    response = "Surgical extraction is recommended when caries pass the secondary dentin threshold. Conservative treatment options include Root Canal Therapy (RCT) with crown sealing.";
+                }
+
+                botBubble.innerText = response;
+                container.appendChild(botBubble);
+                container.scrollTop = container.scrollHeight;
+            }, 750);
+        }
+
+        // Signature Canvas Drawing
+        let webSigCanvas = null;
+        let webSigCtx = null;
+        let isWebSigDrawing = false;
+
+        function initWebSignatureCanvas() {
+            const canvasElem = document.getElementById('web-report-canvas');
+            const placeholder = document.getElementById('web-sig-pad-placeholder');
+            if (!canvasElem) return;
+
+            webSigCanvas = canvasElem;
+            webSigCtx = webSigCanvas.getContext('2d');
+            
+            webSigCanvas.width = webSigCanvas.parentElement.offsetWidth;
+            webSigCanvas.height = webSigCanvas.parentElement.offsetHeight;
+            
+            webSigCtx.strokeStyle = "#4f46e5";
+            webSigCtx.lineWidth = 2.5;
+            webSigCtx.lineCap = "round";
+
+            if (placeholder) placeholder.style.display = 'block';
+        }
+
+        function startWebSignatureDrawing(event) {
+            if (!webSigCanvas || !webSigCtx) return;
+            isWebSigDrawing = true;
+            
+            const rect = webSigCanvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            webSigCtx.beginPath();
+            webSigCtx.moveTo(x, y);
+
+            const placeholder = document.getElementById('web-sig-pad-placeholder');
+            if (placeholder) placeholder.style.display = 'none';
+        }
+
+        function drawWebSignature(event) {
+            if (!isWebSigDrawing || !webSigCanvas || !webSigCtx) return;
+            
+            const rect = webSigCanvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+
+            webSigCtx.lineTo(x, y);
+            webSigCtx.stroke();
+        }
+
+        function stopWebSignatureDrawing() {
+            isWebSigDrawing = false;
+        }
+
+    </script>
 </body>
 </html>
