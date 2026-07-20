@@ -10,6 +10,15 @@
     ],
     "ios": {
       "supportsTablet": true
-    }
+    },
+    "android": {
+      "package": "com.samikshasen.dentalai"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a0671940-5fd5-4e58-aaf6-09d7de19a081"
+      }
+    },
+    "owner": "samiksha08"
   }
 }

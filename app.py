@@ -1,8 +1,11 @@
 from flask import Flask, request, jsonify, render_template
 import os
+import time
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.utils import load_img, img_to_array
+from tensorflow.keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input
+from PIL import Image
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -11,11 +14,17 @@ CORS(app)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-# Load trained model
+# Load trained caries prediction model
 model = tf.keras.models.load_model("caries_model1.h5")
 
+# Load X-ray validation model and base feature extractor
+print("Loading X-ray validation models...")
+validation_base_model = MobileNetV2(weights='imagenet', include_top=False, pooling='avg')
+validation_clf = tf.keras.models.load_model("xray_validator.h5")
+print("Validation models loaded successfully.")
 
-def predict_caries(filepath):
+
+def predict_caries(filepath, threshold):
     # Get expected input size from model
     _, h, w, c = model.input_shape
 
@@ -48,14 +57,14 @@ def predict_caries(filepath):
 
     confidence = float(prediction[0][0])
 
-    # Binary classification
-    if confidence >= 0.5:
+    # Binary classification using the dynamic threshold parameter
+    if confidence >= threshold:
         condition = "Caries Found"
-        extraction = "Go for surgical extraction"
+        extraction = "Consultation for restorative treatment (Filling or RCT)"
         confidence_percent = confidence * 100
     else:
         condition = "No Caries Detected"
-        extraction = "Go for manual extraction"
+        extraction = "Routine oral hygiene and regular checkups"
         confidence_percent = (1 - confidence) * 100
 
     return (
@@ -72,7 +81,6 @@ def home():
 
 @app.route("/predict", methods=["POST"])
 def predict():
-
     if "file" not in request.files:
         return jsonify({
             "error": "No file uploaded"
@@ -85,14 +93,98 @@ def predict():
             "error": "No file selected"
         })
 
+    # Read threshold from request, default to 0.85
+    threshold = float(request.form.get("threshold", 0.85))
+
+    # Secure a unique filename per request to avoid caching issues
+    filename = f"xray_{int(time.time() * 1000)}_{file.filename}"
     filepath = os.path.join(
         UPLOAD_FOLDER,
-        file.filename
+        filename
     )
 
-    file.save(filepath)
+    try:
+        file.save(filepath)
+    except Exception as e:
+        return jsonify({
+            "error": f"Failed to save uploaded image: {str(e)}"
+        })
 
-    condition, extraction, confidence = predict_caries(filepath)
+    # 1. Verify that image is not corrupted
+    try:
+        with Image.open(filepath) as img:
+            img.verify()
+    except Exception:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({
+            "error": "Invalid or corrupted image file."
+        })
+
+    # 2. Check if image is blank/flat
+    try:
+        with Image.open(filepath) as img:
+            # Convert to numpy array to calculate standard deviation
+            arr = np.array(img)
+            if np.std(arr) < 2.0:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                return jsonify({
+                    "error": "X-ray not found.\nPlease upload a valid dental X-ray image."
+                })
+    except Exception as e:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({
+            "error": f"Failed to process image: {str(e)}"
+        })
+
+    # 3. Check X-ray validity model
+    try:
+        # Load and preprocess for MobileNetV2
+        v_img = load_img(filepath, target_size=(224, 224))
+        v_arr = img_to_array(v_img)
+        v_arr = np.expand_dims(v_arr, axis=0)
+        v_arr = preprocess_input(v_arr)
+        
+        # Extract features
+        feats = validation_base_model.predict(v_arr, verbose=0)
+        
+        # Run validation binary classifier
+        prob = float(validation_clf.predict(feats, verbose=0)[0][0])
+        print(f"Validation confidence for {file.filename}: {prob:.6f} vs threshold: {threshold:.6f}")
+        
+        if prob < threshold:
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            return jsonify({
+                "error": "X-ray not found.\nPlease upload a valid dental X-ray image."
+            })
+    except Exception as e:
+        print(f"Validation model error: {e}")
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({
+            "error": "Model prediction failed during validation."
+        })
+
+    # 4. Predict caries using primary caries model and the dynamic threshold
+    try:
+        condition, extraction, confidence = predict_caries(filepath, threshold)
+    except Exception as e:
+        print(f"Prediction model error: {e}")
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({
+            "error": "Model prediction failed."
+        })
+
+    # Cleanup processed file
+    try:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+    except Exception as e:
+        print(f"Error removing temporary file: {e}")
 
     return jsonify({
         "condition": condition,
@@ -106,4 +198,4 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=5000,
         debug=True
-    )
+    )

@@ -18,6 +18,7 @@ import { StatusBar } from 'expo-status-bar';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Stop } from 'react-native-svg';
 import * as ImagePicker from 'expo-image-picker';
 import { Image } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 // List of lower jaw tooth numbers for random caries assignment
 const lowerTeeth = [48, 47, 46, 45, 44, 43, 42, 41, 31, 32, 33, 34, 35, 36, 37, 38];
 
@@ -41,7 +42,7 @@ export default function App() {
 
   // Clinic Parameters
   const [apiUrl, setApiUrl] = useState(
-    'http://localhost:5000/predict'
+    'http://127.0.0.1:5000/predict'
   );
   const [enableHipaaAudit, setEnableHipaaAudit] = useState(true);
   const [enableCloudSync, setEnableCloudSync] = useState(false);
@@ -51,16 +52,7 @@ export default function App() {
   const [activePatientName, setActivePatientName] = useState('Anjali Mishra');
   const [patientSearch, setPatientSearch] = useState('');
 
-  const [patients, setPatients] = useState(() => {
-    if (Platform.OS === 'web') {
-      try {
-        const saved = localStorage.getItem('patients_list');
-        if (saved) return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return [
+  const [patients, setPatients] = useState([
       { 
         name: 'Anjali Mishra', 
         id: 'PT-49201', 
@@ -92,8 +84,19 @@ export default function App() {
           { date: 'Aug 1, 2025', title: 'Comprehensive oral exam', type: 'cleared' }
         ]
       },
-    ];
-  });
+  ]);
+
+  useEffect(() => {
+    AsyncStorage.getItem('patients_list').then(saved => {
+      if (saved) {
+        try {
+          setPatients(JSON.parse(saved));
+        } catch (e) {
+          console.error('Failed to parse patients list', e);
+        }
+      }
+    }).catch(console.error);
+  }, []);
 
   const [showAddPatientForm, setShowAddPatientForm] = useState(false);
   const [newPatientName, setNewPatientName] = useState('');
@@ -101,13 +104,7 @@ export default function App() {
   const [newPatientStatus, setNewPatientStatus] = useState('Healthy Clear');
 
   useEffect(() => {
-    if (Platform.OS === 'web') {
-      try {
-        localStorage.setItem('patients_list', JSON.stringify(patients));
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    AsyncStorage.setItem('patients_list', JSON.stringify(patients)).catch(console.error);
   }, [patients]);
 
   // Interactive Dental Diagnostics States
@@ -124,46 +121,54 @@ export default function App() {
   const fileInputRef = useRef(null);
 
   const pickImage = async () => {
-    const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permissionResult.granted) {
-      alert('Permission to access media library is required!');
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: false,
-      quality: 1,
-    });
-    if (!result.cancelled) {
-      // Just store the image, don't trigger scan yet
-      setSelectedImage(result.uri);
-      setSelectedFile(null);
-      setIsScanning(false);
-      setPredictionCondition('');
-      setPredictionExtraction('');
-      setPredictionConfidence(0);
-      setScannedTooth(null);
+    try {
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permissionResult.granted) {
+        alert('Permission to access media library is required!');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false,
+        quality: 1,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        // Just store the image, don't trigger scan yet
+        setSelectedImage(result.assets[0].uri);
+        setSelectedFile(null);
+        setIsScanning(false);
+        setPredictionCondition('');
+        setPredictionExtraction('');
+        setPredictionConfidence(0);
+        setScannedTooth(null);
+      }
+    } catch (e) {
+      alert('Failed to pick image: ' + e.message);
     }
   };
 
   const takePhoto = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      alert('Permission to access camera is required!');
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: false,
-      quality: 1,
-    });
-    if (!result.cancelled) {
-      setSelectedImage(result.uri);
-      setSelectedFile(null);
-      setIsScanning(false);
-      setPredictionCondition('');
-      setPredictionExtraction('');
-      setPredictionConfidence(0);
-      setScannedTooth(null);
+    try {
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        alert('Permission to access camera is required!');
+        return;
+      }
+      const result = await ImagePicker.launchCameraAsync({
+        allowsEditing: false,
+        quality: 1,
+      });
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        setSelectedImage(result.assets[0].uri);
+        setSelectedFile(null);
+        setIsScanning(false);
+        setPredictionCondition('');
+        setPredictionExtraction('');
+        setPredictionConfidence(0);
+        setScannedTooth(null);
+      }
+    } catch (e) {
+      alert('Failed to take photo: ' + e.message);
     }
   };
 
@@ -320,20 +325,35 @@ export default function App() {
           if (p === 80) setScanStatusText('Mapping demineralization regions...');
         }, 250);
 
-        // Build FormData with the actual file bytes
+        // Build FormData with the actual file bytes and the confidence threshold
         const formData = new FormData();
+        formData.append('threshold', (confidenceThreshold / 100).toString());
+
         if (Platform.OS === 'web') {
           const blobResponse = await fetch(uri);
           const blob = await blobResponse.blob();
-          // Use a unique filename per scan so there's no OS-level caching
-          const uniqueName = `xray_${Date.now()}.png`;
+          // Detect mime type
+          const fileType = blob.type || 'image/png';
+          const extension = fileType.split('/')[1] || 'png';
+          const uniqueName = `xray_${Date.now()}.${extension}`;
           formData.append('file', blob, uniqueName);
           console.log('Sending file to API, size:', blob.size, 'name:', uniqueName);
         } else {
+          let fileType = 'image/jpeg';
+          let extension = 'jpg';
+          const match = /\.([a-zA-Z0-9]+)$/.exec(uri);
+          if (match) {
+            extension = match[1].toLowerCase();
+            if (extension === 'png') {
+              fileType = 'image/png';
+            } else if (extension === 'jpeg' || extension === 'jpg') {
+              fileType = 'image/jpeg';
+            }
+          }
           formData.append('file', {
             uri: uri,
-            name: `xray_${Date.now()}.jpg`,
-            type: 'image/jpeg',
+            name: `xray_${Date.now()}.${extension}`,
+            type: fileType,
           });
         }
 
@@ -357,7 +377,7 @@ export default function App() {
           setIsScanning(false);
 
           if (data.error) {
-            alert('Backend error: ' + data.error);
+            alert(data.error);
             return;
           }
 
@@ -366,7 +386,7 @@ export default function App() {
           const isCaries = condition.toLowerCase().startsWith('caries');
 
           setPredictionCondition(isCaries ? 'Caries Detected' : 'No Caries Detected');
-          setPredictionExtraction(isCaries ? 'Surgical Extraction' : 'Manual Extraction');
+          setPredictionExtraction(extraction);
           setPredictionConfidence(data.confidence || 0);
           setScannedTooth(selectedTooth);
           setDecayedTooth(isCaries ? selectedTooth : null);
@@ -382,8 +402,7 @@ export default function App() {
         setScannedTooth(null);
         setDecayedTooth(null);
         alert(
-          'Unable to connect to Flask API.\n\nError: ' + error.message +
-          '\n\nCheck:\n1. Flask server running on port 5000\n2. API URL in Settings is correct\n3. CORS is enabled'
+          'Scan failed.\n\nError: ' + error.message
         );
       }
     };
@@ -1138,7 +1157,7 @@ export default function App() {
 
       <View style={styles.glassCard}>
         <Text style={styles.inputLbl}>Keras API Endpoint URL</Text>
-        <TextInput style={styles.fieldControl} value={apiUrl} onChangeText={setApiUrl} />
+        <TextInput style={styles.fieldControl} value={apiUrl} onChangeText={setApiUrl} placeholder="https://dental-ai-app-production-4464.up.railway.app/predict" />
       </View>
 
       <View style={styles.glassCard}>
