@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 import os
 import time
 import numpy as np
@@ -74,9 +74,38 @@ def predict_caries(filepath, threshold):
     )
 
 
-@app.route("/")
-def home():
-    return render_template("index.html")
+# The 5 marketing pages (Home, Features, AI Technology, About, Contact) are
+# now a React + Vite + Tailwind + shadcn/ui SPA built to web_app/dist/.
+# Client-side routing (react-router) handles which page renders; Flask's job
+# is just to serve the built index.html for any of those paths, plus the
+# built asset files. /dashboard-demo and /predict are untouched below.
+WEB_DIST = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web_app", "dist")
+
+
+@app.route("/assets/<path:filename>")
+def web_assets(filename):
+    return send_from_directory(os.path.join(WEB_DIST, "assets"), filename)
+
+
+@app.route("/favicon.svg")
+def web_favicon():
+    return send_from_directory(WEB_DIST, "favicon.svg")
+
+
+@app.route("/icons.svg")
+def web_icons():
+    return send_from_directory(WEB_DIST, "icons.svg")
+
+
+@app.route("/dashboard-demo")
+def dashboard_demo():
+    return render_template("dashboard_demo.html")
+
+
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def marketing_site(path):
+    return send_from_directory(WEB_DIST, "index.html")
 
 
 @app.route("/predict", methods=["POST"])
