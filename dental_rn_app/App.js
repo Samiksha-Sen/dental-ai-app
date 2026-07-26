@@ -506,6 +506,8 @@ export default function App() {
           console.warn('Login attempt notice:', e.message);
         } finally {
           setAuthLoading(false);
+          loadPatients();
+          loadScanHistory();
           setCurrentFlow('app');
         }
       }}
@@ -540,7 +542,14 @@ export default function App() {
   );
 
   const renderOtp = () => (
-    <Otp otpCodes={otpCodes} onSubmit={() => setCurrentFlow('app')} />
+    <Otp
+      otpCodes={otpCodes}
+      onSubmit={() => {
+        loadPatients();
+        loadScanHistory();
+        setCurrentFlow('app');
+      }}
+    />
   );
 
   // --- CORE SYSTEM VIEWPORTS ---
